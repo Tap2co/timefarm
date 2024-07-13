@@ -1,6 +1,5 @@
 import requests
 import json
-import urllib.parse
 import argparse
 
 headers = {
@@ -21,15 +20,16 @@ headers = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0'
 }
 
-def get_access_token_and_info(query_data):
+def get_access_token_and_info(query_data, proxy=None):
     url = 'https://tg-bot-tap.laborx.io/api/v1/auth/validate-init/v2'
     try:
         payload = {
             "initData": query_data,
             "platform": "ios"
         }
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()  # Akan memicu error jika status bukan 200
+        proxies = {"http": proxy, "https": proxy} if proxy else None
+        response = requests.post(url, headers=headers, json=payload, proxies=proxies)
+        response.raise_for_status()  # Trigger an error if status is not 200
         
         token_info = response.json()
         with open('tokens.txt', 'a') as file:
@@ -54,13 +54,11 @@ def get_content_from_gist(gist_url):
     else:
         raise Exception(f"Failed to fetch content from Gist: {response.status_code}")
 
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Generate Time tokens')
     parser.add_argument('--gist', type=str, help='Gist URL')
-    args = parser.parse_args()
-    return args
-
+    parser.add_argument('--proxy', type=str, help='SOCKS5 proxy (format: socks5://user:pass@host:port)')
+    return parser.parse_args()
 
 def main():
     args = parse_arguments()
@@ -73,7 +71,7 @@ def main():
     
     for query_data in queries:
         query_data = query_data.strip()
-        get_access_token_and_info(query_data)
+        get_access_token_and_info(query_data, proxy=args.proxy)
 
 if __name__ == "__main__":
     main()

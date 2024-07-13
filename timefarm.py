@@ -11,6 +11,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='TimeFarm BOT')
     parser.add_argument('--task', type=str, choices=['y', 'n'], help='Claim Task (y/n)')
     parser.add_argument('--upgrade', type=str, choices=['y', 'n'], help='Auto Upgrade (y/n)')
+    parser.add_argument('--proxy', type=str, help='SOCKS5 proxy (format: socks5://user:pass@host:port)')
     args = parser.parse_args()
 
     if args.task is None:
@@ -26,6 +27,7 @@ def parse_arguments():
 args = parse_arguments()
 cek_task_enable = args.task
 cek_upgrade_enable = args.upgrade
+proxy = args.proxy
 
 headers = {
     'accept': '*/*',
@@ -45,69 +47,49 @@ headers = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0'
 }
 
+def get_proxies():
+    return {"http": proxy, "https": proxy} if proxy else None
+
 def cek_farming(token):
     url = 'https://tg-bot-tap.laborx.io/api/v1/farming/info'
     headers['authorization'] = f'Bearer {token}'
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, proxies=get_proxies())
     return response.json()
 
 def start_farming(token):
     url = 'https://tg-bot-tap.laborx.io/api/v1/farming/start'
     headers['authorization'] = f'Bearer {token}'
-    response = requests.post(url, headers=headers, json={})
+    response = requests.post(url, headers=headers, json={}, proxies=get_proxies())
     return response.json()
 
 def finish_farming(token):
     url = 'https://tg-bot-tap.laborx.io/api/v1/farming/finish'
     headers['authorization'] = f'Bearer {token}'
-    response = requests.post(url, headers=headers, json={})
+    response = requests.post(url, headers=headers, json={}, proxies=get_proxies())
     return response.json()
 
 def cek_task(token):
     url = 'https://tg-bot-tap.laborx.io/api/v1/tasks'
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'Content-Type': 'application/json'
-    }
-    response = requests.get(url, headers=headers)
+    headers['authorization'] = f'Bearer {token}'
+    response = requests.get(url, headers=headers, proxies=get_proxies())
     return response.json()
 
 def submit_task(token, task_id):
     url = f'https://tg-bot-tap.laborx.io/api/v1/tasks/{task_id}/submissions'
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'Content-Type': 'application/json'
-    }
-    response = requests.post(url, headers=headers, json={})
+    headers['authorization'] = f'Bearer {token}'
+    response = requests.post(url, headers=headers, json={}, proxies=get_proxies())
     return response.json()
 
 def claim_task(token, task_id):
     url = f'https://tg-bot-tap.laborx.io/api/v1/tasks/{task_id}/claims'
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'Content-Type': 'application/json'
-    }
-    response = requests.post(url, headers=headers, json={})
+    headers['authorization'] = f'Bearer {token}'
+    response = requests.post(url, headers=headers, json={}, proxies=get_proxies())
     return response.json()
 
 def upgrade_level(token):
     url = 'https://tg-bot-tap.laborx.io/api/v1/me/level/upgrade'
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'Content-Type': 'application/json',
-        'accept': '*/*',
-        'accept-language': 'en-US,en;q=0.9',
-        'origin': 'https://tg-tap-miniapp.laborx.io',
-        'referer': 'https://tg-tap-miniapp.laborx.io/',
-        'sec-ch-ua': '"Microsoft Edge";v="125", "Chromium";v="125", "Not.A/Brand";v="24", "Microsoft Edge WebView2";v="125"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"Windows"',
-        'sec-fetch-dest': 'empty',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-site',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0'
-    }
-    response = requests.post(url, headers=headers)
+    headers['authorization'] = f'Bearer {token}'
+    response = requests.post(url, headers=headers, proxies=get_proxies())
     return response.json()
 
 def auto_upgrade(token):
@@ -150,8 +132,6 @@ def print_welcome_message():
     print(Fore.BLUE + Style.BRIGHT + "Buy me a coffee :) 0823 2367 3487 GOPAY / DANA")
     print(Fore.RED + Style.BRIGHT + "NOT FOR SALE ! Ngotak dikit bang. Ngoding susah2 kau tinggal rename :)\n\n")
 
- 
-
 def main():
     while True:
         print_welcome_message()
@@ -162,8 +142,7 @@ def main():
       
         for token in tokens:
             try:
-                # Removed query_data and user details extraction
-                balance_info = cek_farming(token)  # Replace with actual balance info retrieval logic
+                balance_info = cek_farming(token)
     
                 print(Fore.CYAN + Style.BRIGHT + f"\n===== [ Akun {tokens.index(token) + 1} ] =====")
                 print(Fore.YELLOW + Style.BRIGHT + f"[ Balance ] : {int(float(balance_info['balance'])):,}".replace(',', '.'))
@@ -191,94 +170,43 @@ def main():
                             else:
                                 print(f"\r[ Task ] : Submit task: {task['title']}", end="", flush=True)
                                 if task.get('submission', {}).get('status') == 'SUBMITTED':
-                                    print(Fore.YELLOW + Style.BRIGHT + f"\r[ Task ] : Submit task: {task['title']} | Already Submitted", flush=True)
-                                else:
+                                    print(Fore.YELLOW + Style.BRIGHT + f"\r[ Task ] : {task['title']} | Submitted", flush=True)
+                                elif task.get('submission', {}).get('status') == 'REJECTED':
+                                    print(Fore.RED + Style.BRIGHT + f"\r[ Task ] : {task['title']} | Rejected", flush=True)
+                                elif task.get('submission', {}).get('status') == 'APPROVED':
+                                    print(Fore.GREEN + Style.BRIGHT + f"\r[ Task ] : {task['title']} | Approved", flush=True)
+                                elif task.get('submission', {}).get('status') == 'NONE':
                                     response = submit_task(token, task['id'])
                                     if response is not None:
                                         if 'error' in response:
-                                            print(Fore.RED + Style.BRIGHT + f"\r[ Task ] : Submit task: {task['title']} | {response['error']['message']}", end="", flush=True)
+                                            if response['error']['message'] == "Failed to submit":
+                                                print(Fore.RED + Style.BRIGHT + f"\r[ Task ] : Submit task: {task['title']} | Failed", flush=True)
                                         else:
-                                            print(Fore.GREEN + Style.BRIGHT + f"\r[ Task ] : Submit task: {task['title']} | Submitted", flush=True)
-                                    time.sleep(3)  # Tunggu 3 detik sebelum mengklaim
-                                print(f"\r[ Task ] : Claim task: {task['title']}", end="", flush=True)
-                                response = claim_task(token, task['id'])
-                                if response is not None:
-                                    if 'error' in response:
-                                        if response['error']['message'] == "Failed to claim reward":
-                                            print(Fore.RED + Style.BRIGHT + f"\r[ Task ] : Claim task: {task['title']} | Failed to claim reward / already claimed", end="", flush=True)
-                                    else:
-                                        print(Fore.GREEN + Style.BRIGHT + f"\r[ Task ] : Claim task: {task['title']} | Claimed", flush=True)
-                print(Fore.YELLOW + Style.BRIGHT + f"\r[ Farming ] : Checking ...", end="", flush=True)
-                time.sleep(2)
-                farming_response = finish_farming(token)
-                if farming_response is not None:
-                    if 'error' in farming_response:
-                        if farming_response['error']['message'] == "Too early to finish farming":
-
-                            cek_farming_response = cek_farming(token)
-                            if cek_farming_response:
-                                started_at = datetime.fromisoformat(cek_farming_response['activeFarmingStartedAt'].replace('Z', '+00:00')).astimezone(timezone.utc)
-                                duration_sec = cek_farming_response['farmingDurationInSec']
-                                end_time = started_at + timedelta(seconds=duration_sec)
-                                time_now = datetime.now(timezone.utc)
-
-                                remaining_time = end_time - time_now
-                                if remaining_time.total_seconds() > 0:
-                                    hours, remainder = divmod(remaining_time.total_seconds(), 3600)
-                                    minutes, _ = divmod(remainder, 60)
-                                    print(Fore.RED + Style.BRIGHT + f"\r[ Farming ] : Claim farming in {int(hours)} hours {int(minutes)} minutes", flush=True)
-                                else:
-                                    print(Fore.GREEN + Style.BRIGHT + f"\r[ Farming ] : Farming can be claimed now", flush=True)
-                        elif farming_response['error']['message'] == "Farming didn't start":
-                            print(Fore.YELLOW + Style.BRIGHT + f"\r[ Farming ] : Starting Farming..", end="", flush=True)
-                            time.sleep(2)
-                            start_farming_response = start_farming(token)
-                            if start_farming_response is not None:
-                                print(Fore.GREEN + Style.BRIGHT + f"\r[ Farming ] : Started | Reward : {int(start_farming_response['farmingReward']):,}".replace(',', '.'), flush=True)
-                            else:
-                                if 'error' in start_farming_response:
-                                    if start_farming_response['error']['message'] == "Farming already started":
-                                        print(Fore.RED + Style.BRIGHT + f"\r[ Farming ] : Farming Already Started", flush=True)
-                                else:
-                                    print(Fore.RED + Style.BRIGHT + f"\r[ Farming ] : Gagal Start Farming", flush=True)
-                        else:
-                            print(f"\r[ Farming ] : {farming_response['error']['message']}", flush=True)
+                                            print(Fore.GREEN + Style.BRIGHT + f"\r[ Task ] : Submit task: {task['title']} | Submitted", flush=True) 
                     else:
-                        print(Fore.GREEN + Style.BRIGHT + f"\r[ Farming ] : Claimed | Balance: {int(farming_response['balance']):,}".replace(',', '.'), flush=True)
-                        print(Fore.YELLOW + Style.BRIGHT + f"\r[ Farming ] : Checking Farming..", end="", flush=True)
-                        time.sleep(2)
-                        cek_farming_response = cek_farming(token)
-                        if cek_farming_response is not None:
-                                if cek_farming_response['activeFarmingStartedAt'] is None:
-                                    print(Fore.RED + Style.BRIGHT + f"\r[ Farming ] : Farming not started", flush=True)
-                                    print(Fore.YELLOW + Style.BRIGHT + f"\r[ Farming ] : Starting Farming..", end="", flush=True)
-                                    time.sleep(2)
-                                    start_farming_response = start_farming(token)
-                                    if start_farming_response is not None:
-                                        print(Fore.GREEN + Style.BRIGHT + f"\r[ Farming ] : Started | Reward : {int(start_farming_response['farmingReward']):,}".replace(',', '.'), flush=True)
-                                    else:
-                                        if 'error' in start_farming_response:
-                                            if start_farming_response['error']['message'] == "Farming already started":
-                                                print(Fore.RED + Style.BRIGHT + f"\r[ Farming ] : Farming Already Started", flush=True)
-                                            else:
-                                                print(Fore.RED + Style.BRIGHT + f"\r[ Farming ] : Gagal Start Farming", flush=True)
-                                else:
-                                    print(Fore.YELLOW + Style.BRIGHT + f"\r[ Farming ] : Farming Already Started", flush=True)                              
+                        print(Fore.YELLOW + Style.BRIGHT + "\r[ Task ] : No tasks available")
+                farming_info = cek_farming(token)
+                if farming_info.get('state') == 'FARMING':
+                    print(Fore.GREEN + Style.BRIGHT + f"\r[ Farming ] : Sedang farming.. - Target: {int(farming_info['target']) - int(farming_info['elapsed'])} detik")
+                    wait_time = int(farming_info['target']) - int(farming_info['elapsed'])
+                    animated_loading(wait_time)
+                    response = finish_farming(token)
+                    if response is not None:
+                        if 'error' in response:
+                            print(Fore.RED + Style.BRIGHT + f"\r[ Farming ] : Finish farming: Gagal - {response['error']['message']}")
                         else:
-                            print(Fore.RED + Style.BRIGHT + f"\r[ Farming ] : Gagal Cek Farming", flush=True)
-                            continue
-                        # print(Fore.YELLOW + Style.BRIGHT + f"\r[ Refferal ] : Checking ...", end="", flush=True)
-                        # time.sleep(2)
-                        # refferal_response = cek_reff(token)
-                        # if refferal_response:
-                        #     print(Fore.GREEN + Style.BRIGHT + f"\r[ Refferal ] : {refferal_response['totalRefferal']}", flush=True)
-               
+                            print(Fore.GREEN + Style.BRIGHT + f"\r[ Farming ] : Finish farming: Berhasil")
+                elif farming_info.get('state') == 'IDLE':
+                    print(Fore.YELLOW + Style.BRIGHT + "\r[ Farming ] : Mulai farming..")
+                    response = start_farming(token)
+                    if response is not None:
+                        if 'error' in response:
+                            print(Fore.RED + Style.BRIGHT + f"\r[ Farming ] : Gagal memulai farming - {response['error']['message']}")
+                        else:
+                            print(Fore.GREEN + Style.BRIGHT + "\r[ Farming ] : Berhasil memulai farming")
             except Exception as e:
-                
-                print(f"An error occurred: {str(e)}")
-                time.sleep(5)
-        print(Fore.BLUE + Style.BRIGHT + f"\n==========SEMUA AKUN TELAH DI PROSES==========\n",  flush=True)    
-        animated_loading(3)     
+                print(Fore.RED + Style.BRIGHT + f"\n[ Error ] : Error pada akun {tokens.index(token) + 1} - {str(e)}", flush=True)
+        time.sleep(5)
 
 if __name__ == "__main__":
     main()
