@@ -1,6 +1,7 @@
 import requests
 import json
 import urllib.parse
+import argparse
 
 headers = {
     'accept': '*/*',
@@ -42,9 +43,33 @@ def get_access_token_and_info(query_data):
         print(f"Request Error: {e}")
         return None
 
+def get_content_from_local_file(file_path):
+    with open(file_path, 'r') as file:
+        return file.read().splitlines()
+
+def get_content_from_gist(gist_url):
+    response = requests.get(gist_url)
+    if response.status_code == 200:
+        return response.text.splitlines()
+    else:
+        raise Exception(f"Failed to fetch content from Gist: {response.status_code}")
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Generate Time tokens')
+    parser.add_argument('--gist', type=str, help='Gist URL')
+    args = parser.parse_args()
+    return args
+
+
 def main():
-    with open('query.txt', 'r') as file:
-        queries = file.readlines()
+    args = parse_arguments()
+    q_file = 'query.txt'
+
+    if args.gist:
+        queries = get_content_from_gist(args.gist)
+    else:
+        queries = get_content_from_local_file(q_file)
     
     for query_data in queries:
         query_data = query_data.strip()
